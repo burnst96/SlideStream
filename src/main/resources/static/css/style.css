@@ -1,0 +1,39 @@
+nav {
+    /*position: fixed;*/
+    /*z-index: 999;*/
+}
+
+#configContainer {
+    text-align: center;
+}
+
+.imageHolder {
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.list-group-item {
+    background-color: white;
+    cursor: move;
+}
+
+.highlight {
+    border: 1px solid red;
+    font-weight: bold;
+    font-size: 45px;
+    background-color: lightblue;
+}
+
+.clickable-icon {
+    cursor: pointer;
+    margin-right: 0 !important;
+}
