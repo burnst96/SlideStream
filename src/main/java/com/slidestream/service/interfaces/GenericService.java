@@ -16,7 +16,7 @@ public interface GenericService<T> {
 
     String getAllAsJsonString();
 
-    T getLatestGrouping();
+    T getLatestConfiguration();
 
     List<T> findAll();
 

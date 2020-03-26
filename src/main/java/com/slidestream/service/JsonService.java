@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import javax.transaction.Transactional;
 
 @Service
 public class JsonService {
@@ -16,6 +17,7 @@ public class JsonService {
     @Resource
     private ObjectMapper objectMapper;
 
+    @Transactional
     public String convertToJsonString(Object entity) {
         if(entity == null) {
             return "{}";
@@ -24,7 +26,7 @@ public class JsonService {
                 return objectMapper.writeValueAsString(entity);
             } catch(JsonProcessingException e) {
                 LOGGER.error("Groupings list could not be serialized to Json String.", e);
-                return null;
+                return "{}";
             }
         }
     }

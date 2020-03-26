@@ -53,7 +53,7 @@ public class ImageServiceImpl extends GenericServiceAbstract<Image> implements I
     }
 
     @Override
-    public Image getLatestGrouping() {
+    public Image getLatestConfiguration() {
         return dao.findTopByOrderByPkDesc();
     }
 

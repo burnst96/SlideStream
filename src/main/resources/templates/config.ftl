@@ -36,7 +36,7 @@
                                     ${image.name}
                                 </a>
                                 <a class="text-right flex-fill">
-                                    <i class="fas fa-arrow-alt-circle-down imageDownload clickable-icon"></i>
+                                    <i class="fas fa-arrow-alt-circle-down pr-1 imageDownload clickable-icon"></i>
                                     <i class="fas fa-trash-alt deleteImage clickable-icon"></i>
                                 </a>
                             </li>

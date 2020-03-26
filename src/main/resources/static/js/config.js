@@ -46,10 +46,10 @@ function initSortables() {
 
 function downloadImage(e) {
     var imageId = $(e.currentTarget).closest('.list-group-item').attr('data-id');
-    // $.ajax({
-    //     url: 'downloadImage/' + imageId,
-    //     method: 'GET'
-    // });
+    $.ajax({
+        url: 'downloadImage/' + imageId,
+        method: 'GET'
+    });
 }
 
 function deleteImage(e) {

@@ -4,4 +4,6 @@ import com.slidestream.domain.Configuration;
 
 public interface ConfigurationService extends GenericService<Configuration> {
 
+    void updateDelay(long groupPk, int delayInSeconds);
+
 }

@@ -17,40 +17,47 @@ import java.util.stream.Collectors;
 
 @Service
 public class ImageSocketOutputService {
-    private Logger LOGGER = LoggerFactory.getLogger(this.getClass());
+	private static final String STREAM_CHANNEL = "/images/";
+	private Logger LOGGER = LoggerFactory.getLogger(this.getClass());
+	private Map<Long, LocalDateTime> groupsLastModifiedDateTimes = new HashMap<>();
+	private Map<Long, CompletableFuture<Long>> currentlyRunningAsynchronousJobs = new HashMap<>();
 
-    private static final String STREAM_CHANNEL = "/socket/images/";
-    private Map<Long, LocalDateTime> groupsLastModifiedDateTimes = new HashMap<>();
-    private Map<Long, CompletableFuture<Long>> currentlyRunningAsynchronousJobs = new HashMap<>();
+	@Resource
+	private GroupingService groupingService;
 
-    @Resource
-    private GroupingService groupingService;
+	@Scheduled(cron = "*/1 * * * * *")
+	protected void groupWebSocketLoop() {
+		try {
+			List<Grouping> groups = groupingService.getAllFetchImages();
 
-    @Scheduled(cron = "*/1 * * * * *")
-    protected void groupWebSocketLoop() {
-        LOGGER.info("MASTER WEB SOCKET LOOP START");
+			for (Grouping group : groups) {
+				if (!group.getImages().isEmpty()) {
+					if (!groupsLastModifiedDateTimes.containsKey(group.getPk()) && currentlyRunningAsynchronousJobs.containsKey(group.getPk())) {
+						groupsLastModifiedDateTimes.put(group.getPk(), group.getLastModified());
+						executeGroupWebSocket(group);
+					} else {
+						CompletableFuture<Long> asyncSendImagesInstance = currentlyRunningAsynchronousJobs.get(group.getPk());
+						if (asyncSendImagesInstance == null || asyncSendImagesInstance.isDone()) {
+							executeGroupWebSocket(group);
+						}
+					}
+				}
+			}
 
-        List<Grouping> groups = groupingService.getAllFetchImages();
-        for(Grouping group : groups) {
-            if(!groupsLastModifiedDateTimes.containsKey(group.getPk()) && currentlyRunningAsynchronousJobs.containsKey(group.getPk())) {
-                groupsLastModifiedDateTimes.put(group.getPk(), group.getLastModified());
-                currentlyRunningAsynchronousJobs.put(group.getPk(), groupingService.sendImageDetailsAsynchronously(group, STREAM_CHANNEL));
-            } else {
-                CompletableFuture<Long> asyncSendImagesInstance = currentlyRunningAsynchronousJobs.get(group.getPk());
-                if(asyncSendImagesInstance == null || asyncSendImagesInstance.isDone()) {
-                    currentlyRunningAsynchronousJobs.put(group.getPk(), groupingService.sendImageDetailsAsynchronously(group, STREAM_CHANNEL));
-                }
-            }
-        }
+			if (!groups.isEmpty()) {
+				currentlyRunningAsynchronousJobs = currentlyRunningAsynchronousJobs.entrySet().stream()
+						.filter(entry -> groups.stream()
+								.map(Grouping::getPk).anyMatch(entry.getKey()::equals))
+						.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+			}
+		} catch (Exception e) {
+			LOGGER.error("Error", e);
+		}
+	}
 
-        if(!groups.isEmpty()) {
-            currentlyRunningAsynchronousJobs = currentlyRunningAsynchronousJobs.entrySet().stream()
-                                                                                            .filter(entry -> groups.stream()
-                                                                                            .map(Grouping::getPk).anyMatch(entry.getKey()::equals))
-                                                                                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        }
-
-        LOGGER.info("MASTER WEB SOCKET LOOP END");
-    }
+	private void executeGroupWebSocket(Grouping group) {
+		currentlyRunningAsynchronousJobs.put(group.getPk(), groupingService.sendImageDetailsAsynchronously(group, STREAM_CHANNEL));
+		groupingService.incrementImageIndex(group.getPk(), group.getCurrentImageIndex() + 1);
+	}
 
 }

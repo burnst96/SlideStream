@@ -4,8 +4,10 @@ import com.slidestream.dao.GroupingDao;
 import com.slidestream.dao.ImageDao;
 import com.slidestream.domain.Configuration;
 import com.slidestream.domain.Grouping;
+import com.slidestream.domain.dto.GroupingDTO;
+import com.slidestream.domain.dto.ImageDTO;
+import com.slidestream.service.JsonService;
 import com.slidestream.service.interfaces.GroupingService;
-import com.slidestream.service.interfaces.ImageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Example;
@@ -15,12 +17,15 @@ import org.springframework.data.domain.Sort;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
-import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -35,14 +40,37 @@ public class GroupingServiceImpl extends GenericServiceAbstract<Grouping> implem
     private ImageDao imageDao;
 
     @Resource
-    private ImageService imageService;
+    private JsonService jsonService;
 
     @Resource
     private SimpMessagingTemplate simpMessagingTemplate;
 
     @Override
     public List<Grouping> getAllFetchImages() {
-        return dao.findAllFetchImages();
+        List<Object[]> idsAndImageIndexes = getAllIdsAndCurrentImageIndexes();
+        List<Grouping> results = dao.findAll();
+
+        // TODO: Workaround for dao.findAll() resetting the image_index on all groupings for some reason
+        for (Grouping g : results) {
+            for (Object[] idAndIndex : idsAndImageIndexes) {
+                if (g.getPk() == (long) idAndIndex[0]) {
+                    g.setCurrentImageIndex((int) idAndIndex[1]);
+                    break;
+                }
+            }
+        }
+
+        return results;
+    }
+
+    @Override
+    public List<Object[]> getAllIdsAndCurrentImageIndexes() {
+        return dao.getAllIdsAndCurrentImageIndexes();
+    }
+
+    @Override
+    public List<Integer> getAllIds() {
+        return dao.findAllIds();
     }
 
     @Override
@@ -60,22 +88,29 @@ public class GroupingServiceImpl extends GenericServiceAbstract<Grouping> implem
         findById(groupId).ifPresent(g -> imageDao.findById(imageId).ifPresent(g::addImage));
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_UNCOMMITTED)
+    @Override
+    public void incrementImageIndex(Long groupId, int imageIndex) {
+        findById(groupId).ifPresent(g -> g.setCurrentImageIndexOverride(imageIndex));
+    }
+
     @Override
     public void removeImageFromGroup(Long groupId, Long imageId) {
         findById(groupId).ifPresent(g -> g.removeImageByImagePk(imageId));
     }
 
     @Async
+    @Transactional(propagation = Propagation.NEVER)
     @Override
     public CompletableFuture<Long> sendImageDetailsAsynchronously(Grouping group, String streamChannel) {
         Configuration config = group.getConfiguration();
         int delay = config.getImageCycleDelay();
 
-        simpMessagingTemplate.convertAndSend(streamChannel + group.getPk(), imageService.getAsJsonString(group.getNextImage()));
+        simpMessagingTemplate.convertAndSend(streamChannel + group.getPk(), jsonService.convertToJsonString(new ImageDTO(group.getNextImage())));
 
         try {
-            LOGGER.info("SLEEPING GROUP ({}) WEB SOCKET THREAD FOR {}ms", group.getName(), delay);
-            Thread.sleep(delay*1000);
+            LOGGER.info("SLEEPING GROUP ({}) WEB SOCKET THREAD FOR {}s", group.getName(), delay);
+            Thread.sleep(delay * 1000);
         } catch(InterruptedException e) {
             LOGGER.error("Could not sleep group ({}) web socket thread... continuing as normal.", group.getName());
         }
@@ -85,11 +120,11 @@ public class GroupingServiceImpl extends GenericServiceAbstract<Grouping> implem
 
     @Override
     public String getAllAsJsonString() {
-        return getAsJsonString(dao.findAll());
+        return jsonService.convertToJsonString(dao.findAll().stream().map(GroupingDTO::new).collect(Collectors.toList()));
     }
 
     @Override
-    public Grouping getLatestGrouping() {
+    public Grouping getLatestConfiguration() {
         return dao.findTopByOrderByPkDesc();
     }
 
@@ -212,5 +247,6 @@ public class GroupingServiceImpl extends GenericServiceAbstract<Grouping> implem
     public <S extends Grouping> boolean exists(Example<S> example) {
         return dao.exists(example);
     }
-    
+
+
 }

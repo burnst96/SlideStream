@@ -9,11 +9,17 @@ public interface GroupingService extends GenericService<Grouping> {
 
     List<Grouping> getAllFetchImages();
 
+    List<Object[]> getAllIdsAndCurrentImageIndexes();
+
+    List<Integer> getAllIds();
+
     List<String> getAllNames();
 
     Grouping createGroup();
 
     void addImageToGroup(Long groupId, Long imageId);
+
+    void incrementImageIndex(Long groupId, int imageIndex);
 
     void removeImageFromGroup(Long groupId, Long imageId);
 

@@ -27,8 +27,14 @@ public class ConfigurationServiceImpl extends GenericServiceAbstract<Configurati
     }
 
     @Override
-    public Configuration getLatestGrouping() {
+    public Configuration getLatestConfiguration() {
         return dao.findTopByOrderByPkDesc();
+    }
+
+    @Override
+    public void updateDelay(long groupPk, int delayInSeconds) {
+        Configuration config = dao.findByGroupPk(groupPk);
+        config.setImageCycleDelay(delayInSeconds);
     }
 
     @Override

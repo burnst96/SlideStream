@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Entity
+@Cacheable(false)
 @Table(name = Grouping.TABLE_NAME)
 public class Grouping extends GenericDomain {
 
@@ -46,19 +47,23 @@ public class Grouping extends GenericDomain {
     }
 
     public void setCurrentImageIndex(int currentImageIndex) {
-        if(images == null) {
+        if (images == null || images.isEmpty()) {
             images = new ArrayList<>();
         }
 
         if(!images.isEmpty()) {
-            if(currentImageIndex >= images.size()) {
-                this.currentImageIndex = images.size() - 1;
+            if (currentImageIndex >= images.size()) {
+                this.currentImageIndex = 0;
             } else {
                 this.currentImageIndex = currentImageIndex;
             }
         } else {
             this.currentImageIndex = 0;
         }
+    }
+
+    public void setCurrentImageIndexOverride(int currentImageIndex) {
+        this.currentImageIndex = currentImageIndex;
     }
 
     protected void setImages(List<Image> images) {
@@ -93,7 +98,9 @@ public class Grouping extends GenericDomain {
     @Transient
     public Image getNextImage() {
         if(!images.isEmpty() && currentImageIndex < images.size() && currentImageIndex > -1) {
-            return images.get(currentImageIndex);
+            Image image = images.get(currentImageIndex);
+            currentImageIndex += 1;
+            return image;
         } else {
             return null;
         }

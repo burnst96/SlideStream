@@ -1,5 +1,6 @@
 package com.slidestream.domain;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.codec.binary.Base64;
 
@@ -9,6 +10,7 @@ import java.util.Set;
 
 @Entity
 @Table(name = Image.TABLE_NAME)
+//@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "pk")
 public class Image extends GenericDomain {
 
     static final String TABLE_NAME = "IMAGE";
@@ -20,7 +22,6 @@ public class Image extends GenericDomain {
     public Image() {}
 
     public Image(String name, byte[] value) {
-        super();
         this.name = name;
         this.value = value;
     }
@@ -43,6 +44,7 @@ public class Image extends GenericDomain {
         this.value = value;
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     @ManyToMany(mappedBy = "images", cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH, CascadeType.DETACH})
     public Set<Grouping> getGroupings() {
         return groupings;
