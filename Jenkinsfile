@@ -13,7 +13,7 @@ pipeline {
       }
     }
 
-    stage('') {
+    stage('Deploy') {
       steps {
         echo 'Deployment Not Implemented Yet...'
       }
